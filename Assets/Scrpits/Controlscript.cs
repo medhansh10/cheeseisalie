@@ -13,6 +13,7 @@ public class BotController : MonoBehaviour
 {
     [Header("References")]
     public NavMeshAgent agent;
+    public RatSpeedController ratSpeedController;
     public GameObject markerPrefab;
     public GameObject loseMenuUI; 
     public TMP_Text loseMessageText;
@@ -35,6 +36,8 @@ public class BotController : MonoBehaviour
     void Start()
     {
         if (agent == null) agent = GetComponent<NavMeshAgent>();
+        if (ratSpeedController == null) ratSpeedController = GetComponent<RatSpeedController>();
+        if (ratSpeedController == null) ratSpeedController = gameObject.AddComponent<RatSpeedController>();
         ConfigureCheeseIcon();
         SetCheeseHeldIconVisible(true);
         ResetCheeseTimer();
@@ -95,6 +98,8 @@ public class BotController : MonoBehaviour
                 currentMarker.layer = Mathf.RoundToInt(Mathf.Log(baitLayer.value, 2));
                 SetCheeseHeldIconVisible(false);
 
+                ratSpeedController.maximumPathDistance = maxPathDistance;
+                ratSpeedController.SetSpeedForPath(GetPathLength(path));
                 agent.isStopped = false;
                 agent.SetDestination(hit.point);
                 Debug.Log("Placed the cheese");
@@ -165,6 +170,11 @@ public class BotController : MonoBehaviour
         {
             agent.isStopped = true;
             agent.ResetPath();
+        }
+
+        if (ratSpeedController != null)
+        {
+            ratSpeedController.ResetSpeed();
         }
     }
 
