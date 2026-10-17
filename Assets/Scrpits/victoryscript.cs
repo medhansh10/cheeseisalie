@@ -36,6 +36,12 @@ public class WinPoint : MonoBehaviour
         
         if(victoryMenuUI != null) victoryMenuUI.SetActive(true);
 
+        if (botTransform != null)
+        {
+            BotController botController = botTransform.GetComponent<BotController>();
+            if (botController != null) botController.StopMazeTimer();
+        }
+
         
         Time.timeScale = 0f;
 

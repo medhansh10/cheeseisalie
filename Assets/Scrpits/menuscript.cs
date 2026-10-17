@@ -41,6 +41,7 @@ public class GameMenuManager : MonoBehaviour
         Time.timeScale = 1f; // Run the game
         isPaused = false;
         SetMouseState(true);
+        BeginMazeRun();
     }
 
     // Called by "Resume" button on Pause Menu
@@ -69,6 +70,7 @@ public class GameMenuManager : MonoBehaviour
         {
             mazeGenerator.Generate(); // Rebuild the maze
             ResumeGame();             // Instantly close menu and play
+            BeginMazeRun();
         }
     }
 
@@ -87,5 +89,17 @@ public class GameMenuManager : MonoBehaviour
     {
         Cursor.visible = visible;
         Cursor.lockState = visible ? CursorLockMode.None : CursorLockMode.Locked;
+    }
+
+    private void BeginMazeRun()
+    {
+        if (mazeGenerator != null && mazeGenerator.botScript != null)
+        {
+            mazeGenerator.botScript.BeginMazeRun();
+        }
+        else
+        {
+            Debug.LogError("GameMenuManager cannot start the maze timer because the maze bot is not assigned.", this);
+        }
     }
 }

@@ -1,6 +1,13 @@
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.EventSystems;
+using TMPro;
+
+public enum LoseReason
+{
+    ReachedCheese,
+    TimerExpired
+}
 
 public class BotController : MonoBehaviour
 {
@@ -8,6 +15,10 @@ public class BotController : MonoBehaviour
     public NavMeshAgent agent;
     public GameObject markerPrefab;
     public GameObject loseMenuUI; 
+    public TMP_Text loseMessageText;
+    [Tooltip("UI icon shown while the player can place the cheese.")]
+    public GameObject cheeseHeldIcon;
+    public MonoBehaviour cheeseTimer;
     
     [Header("Layers")]
     public LayerMask groundLayer;
@@ -24,6 +35,16 @@ public class BotController : MonoBehaviour
     void Start()
     {
         if (agent == null) agent = GetComponent<NavMeshAgent>();
+        ConfigureCheeseIcon();
+        SetCheeseHeldIconVisible(true);
+        ResetCheeseTimer();
+    }
+
+    public void BeginMazeRun()
+    {
+        SetCheeseHeldIconVisible(true);
+        ResetCheeseTimer();
+        StartCheeseTimer();
     }
 
     void Update()
@@ -54,6 +75,8 @@ public class BotController : MonoBehaviour
             if (currentMarker != null && hit.collider.gameObject == currentMarker)
             {
                 ClearBait();
+                SetCheeseHeldIconVisible(true);
+                Debug.Log("Picked up the cheese");
                 return;
             }
         }
@@ -70,9 +93,11 @@ public class BotController : MonoBehaviour
 
                 currentMarker = Instantiate(markerPrefab, hit.point, Quaternion.identity);
                 currentMarker.layer = Mathf.RoundToInt(Mathf.Log(baitLayer.value, 2));
+                SetCheeseHeldIconVisible(false);
 
                 agent.isStopped = false;
                 agent.SetDestination(hit.point);
+                Debug.Log("Placed the cheese");
             }
         }
     }
@@ -83,20 +108,29 @@ public class BotController : MonoBehaviour
         {
             if (Vector3.Distance(transform.position, currentMarker.transform.position) <= arrivalThreshold)
             {
-                TriggerLose();
+                TriggerLose(LoseReason.ReachedCheese);
             }
         }
     }
 
-    void TriggerLose()
+    public void TriggerLose(LoseReason reason)
     {
-        
         ClearBait();
+        SetCheeseHeldIconVisible(false);
+        StopCheeseTimer();
 
-        
-        if (loseMenuUI != null) loseMenuUI.SetActive(true);
-        
-  
+        if (loseMessageText != null)
+        {
+            loseMessageText.text = reason == LoseReason.TimerExpired
+                ? "Timer over"
+                : "The rat got the cheese\n\nYou lost";
+        }
+
+        if (loseMenuUI != null)
+        {
+            loseMenuUI.SetActive(true);
+        }
+
         Time.timeScale = 0f;
     }
 
@@ -105,6 +139,8 @@ public class BotController : MonoBehaviour
     {
        
         ClearBait();
+        SetCheeseHeldIconVisible(true);
+        ResetCheeseTimer();
         nextClickTime = 0;
 
        
@@ -130,6 +166,59 @@ public class BotController : MonoBehaviour
             agent.isStopped = true;
             agent.ResetPath();
         }
+    }
+
+    private void SetCheeseHeldIconVisible(bool isVisible)
+    {
+        if (cheeseHeldIcon != null)
+        {
+            cheeseHeldIcon.SetActive(isVisible);
+        }
+    }
+
+    private void ConfigureCheeseIcon()
+    {
+        if (cheeseHeldIcon == null) return;
+
+        Canvas iconCanvas = cheeseHeldIcon.GetComponent<Canvas>();
+        if (iconCanvas != null)
+        {
+            iconCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            iconCanvas.worldCamera = null;
+            iconCanvas.overrideSorting = true;
+            iconCanvas.sortingOrder = -10;
+        }
+
+        RectTransform iconTransform = cheeseHeldIcon.GetComponent<RectTransform>();
+        if (iconTransform == null) return;
+
+        iconTransform.anchorMin = new Vector2(1f, 0f);
+        iconTransform.anchorMax = new Vector2(1f, 0f);
+        iconTransform.pivot = new Vector2(1f, 0f);
+        iconTransform.sizeDelta = new Vector2(48f, 48f);
+        iconTransform.anchoredPosition = new Vector2(-24f, 24f);
+        iconTransform.localRotation = Quaternion.identity;
+        iconTransform.localScale = Vector3.one;
+    }
+
+    private void StartCheeseTimer()
+    {
+        if (cheeseTimer != null) cheeseTimer.SendMessage("StartTimer", SendMessageOptions.RequireReceiver);
+    }
+
+    private void ResetCheeseTimer()
+    {
+        if (cheeseTimer != null) cheeseTimer.SendMessage("ResetTimer", SendMessageOptions.RequireReceiver);
+    }
+
+    private void StopCheeseTimer()
+    {
+        if (cheeseTimer != null) cheeseTimer.SendMessage("StopTimer", SendMessageOptions.RequireReceiver);
+    }
+
+    public void StopMazeTimer()
+    {
+        StopCheeseTimer();
     }
 
     private float GetPathLength(NavMeshPath path)
